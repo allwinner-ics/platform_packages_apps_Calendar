@@ -50,13 +50,14 @@
         <activity
             android:name="AllInOneActivity"
             android:theme="@style/CalendarTheme.WithActionBar"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustPan"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_CALENDAR" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -140,6 +141,7 @@
 
         <activity android:name="SearchActivity" android:label="@string/search_title"
             android:launchMode="singleTop" android:theme="@style/CalendarTheme.WithActionBar"
+            android:windowSoftInputMode="stateAlwaysHidden"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH"/>

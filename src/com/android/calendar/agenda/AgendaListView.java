@@ -49,9 +49,7 @@ public class AgendaListView extends ListView implements OnItemClickListener {
     private String mTimeZone;
     private Time mTime;
     private boolean mShowEventDetailsWithAgenda;
-    // Used to update the past/present separator at midnight
-    private Handler mMidnightUpdate = null;
-    private Handler mPastEventUpdate = null;
+    private Handler mHandler = null;
 
     private Runnable mTZUpdater = new Runnable() {
         @Override
@@ -107,22 +105,13 @@ public class AgendaListView extends ListView implements OnItemClickListener {
         setDivider(null);
         setDividerHeight(0);
 
-        setMidnightUpdater();
-        setPastEventsUpdater();
+        mHandler = new Handler();
     }
 
 
     // Sets a thread to run one second after midnight and refresh the list view
     // causing the separator between past/present to be updated.
     private void setMidnightUpdater() {
-
-        // Create the handler or clear the existing one.
-        if (mMidnightUpdate == null) {
-            mMidnightUpdate = new Handler();
-        } else {
-            mMidnightUpdate.removeCallbacks(mMidnightUpdater);
-        }
-
         // Calculate the time until midnight + 1 second and set the handler to
         // do a refresh at that time.
         long now = System.currentTimeMillis();
@@ -130,37 +119,29 @@ public class AgendaListView extends ListView implements OnItemClickListener {
         time.set(now);
         long runInMillis = (24 * 3600 - time.hour * 3600 - time.minute * 60 -
                 time.second + 1) * 1000;
-        mMidnightUpdate.postDelayed(mMidnightUpdater, runInMillis);
+        mHandler.removeCallbacks(mMidnightUpdater);
+        mHandler.postDelayed(mMidnightUpdater, runInMillis);
     }
 
     // Stop the midnight update thread
     private void resetMidnightUpdater() {
-        if (mMidnightUpdate != null) {
-            mMidnightUpdate.removeCallbacks(mMidnightUpdater);
-        }
+        mHandler.removeCallbacks(mMidnightUpdater);
     }
 
     // Sets a thread to run every EVENT_UPDATE_TIME in order to update the list
     // with grayed out past events
     private void setPastEventsUpdater() {
 
-        // Create the handler or clear the existing one.
-        if (mPastEventUpdate == null) {
-            mPastEventUpdate = new Handler();
-        } else {
-            mPastEventUpdate.removeCallbacks(mPastEventUpdater);
-        }
         // Run the thread in the nearest rounded EVENT_UPDATE_TIME
         long now = System.currentTimeMillis();
         long roundedTime = (now / EVENT_UPDATE_TIME) * EVENT_UPDATE_TIME;
-        mPastEventUpdate.postDelayed(mPastEventUpdater, EVENT_UPDATE_TIME - (now - roundedTime));
+        mHandler.removeCallbacks(mPastEventUpdater);
+        mHandler.postDelayed(mPastEventUpdater, EVENT_UPDATE_TIME - (now - roundedTime));
     }
 
     // Stop the past events thread
     private void resetPastEventsUpdater() {
-        if (mPastEventUpdate != null) {
-            mPastEventUpdate.removeCallbacks(mPastEventUpdater);
-        }
+        mHandler.removeCallbacks(mPastEventUpdater);
     }
 
     // Go over all visible views and checks if all past events are grayed out.
@@ -228,7 +209,8 @@ public class AgendaListView extends ListView implements OnItemClickListener {
         }
     }
 
-    public void goTo(Time time, long id, String searchQuery, boolean forced) {
+    public void goTo(Time time, long id, String searchQuery, boolean forced,
+            boolean refreshEventInfo) {
         if (time == null) {
             time = mTime;
             long goToTime = getFirstVisibleTime();
@@ -243,11 +225,11 @@ public class AgendaListView extends ListView implements OnItemClickListener {
         if (DEBUG) {
             Log.d(TAG, "Goto with time " + mTime.toString());
         }
-        mWindowAdapter.refresh(mTime, id, searchQuery, forced);
+        mWindowAdapter.refresh(mTime, id, searchQuery, forced, refreshEventInfo);
     }
 
     public void refresh(boolean forced) {
-        mWindowAdapter.refresh(mTime, -1, null, forced);
+        mWindowAdapter.refresh(mTime, -1, null, forced, false);
     }
 
     public void deleteSelectedEvent() {
@@ -256,24 +238,6 @@ public class AgendaListView extends ListView implements OnItemClickListener {
         if (event != null) {
             mDeleteEventHelper.delete(event.begin, event.end, event.id, -1);
         }
-    }
-
-    @Override
-    public int getFirstVisiblePosition() {
-        // TODO File bug!
-        // getFirstVisiblePosition doesn't always return the first visible
-        // item. Sometimes, it is above the visible one.
-        // instead. I loop through the viewgroup children and find the first
-        // visible one. BTW, getFirstVisiblePosition() == getChildAt(0). I
-        // am not looping through the entire list.
-        View v = getFirstVisibleView();
-        if (v != null) {
-            if (DEBUG) {
-                Log.v(TAG, "getFirstVisiblePosition: " + AgendaWindowAdapter.getViewTitle(v));
-            }
-            return getPositionForView(v);
-        }
-        return -1;
     }
 
     public View getFirstVisibleView() {
@@ -310,12 +274,33 @@ public class AgendaListView extends ListView implements OnItemClickListener {
             Log.v(TAG, "getFirstVisiblePosition = " + position);
         }
 
+        // mShowEventDetailsWithAgenda == true implies we have a sticky header. In that case
+        // we may need to take the second visible position, since the first one maybe the one
+        // under the sticky header.
+        if (mShowEventDetailsWithAgenda) {
+            View v = getFirstVisibleView ();
+            if (v != null) {
+                Rect r = new Rect ();
+                v.getLocalVisibleRect(r);
+                if (r.bottom - r.top <=  mWindowAdapter.getStickyHeaderHeight()) {
+                    position ++;
+                }
+            }
+        }
+
         EventInfo event = mWindowAdapter.getEventByPosition(position,
                 false /* startDay = date separator date instead of actual event startday */);
         if (event != null) {
             Time t = new Time(mTimeZone);
             t.set(event.begin);
+            // Save and restore the time since setJulianDay sets the time to 00:00:00
+            int hour = t.hour;
+            int minute = t.minute;
+            int second = t.second;
             t.setJulianDay(event.startDay);
+            t.hour = hour;
+            t.minute = minute;
+            t.second = second;
             if (DEBUG) {
                 t.normalize(true);
                 Log.d(TAG, "position " + position + " had time " + t.toString());

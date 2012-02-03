@@ -152,6 +152,7 @@
   <string-array name="availability">
     <item msgid="454869065893453189">"바쁨"</item>
     <item msgid="6228387173725732140">"한가함"</item>
+    <item msgid="2064426942462573474">"미정"</item>
   </string-array>
   <string-array name="visibility">
     <item msgid="3035788428581513163">"기본값"</item>
@@ -173,7 +174,7 @@
   </string-array>
   <string-array name="delete_repeating_labels">
     <item msgid="4208432367651646938">"이 일정만"</item>
-    <item msgid="8626755531271570950">"이번 및 향후 일정"</item>
+    <item msgid="1536401639805370405">"이번 및 향후 일정"</item>
     <item msgid="7833229563617435430">"모든 일정"</item>
   </string-array>
   <string-array name="delete_repeating_labels_no_selected">
@@ -181,7 +182,7 @@
     <item msgid="6315440193748139854">"모든 일정"</item>
   </string-array>
   <string-array name="change_response_labels">
-    <item msgid="2012815396992847028">"이번 일정만"</item>
+    <item msgid="3466644709343519437">"이번 일정만"</item>
     <item msgid="140670561403965380">"모든 반복 일정"</item>
   </string-array>
   <string-array name="buttons_list">

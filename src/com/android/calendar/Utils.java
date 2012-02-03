@@ -25,7 +25,6 @@ import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
@@ -80,6 +79,8 @@ public class Utils {
     public static final String INTENT_KEY_HOME = "KEY_HOME";
 
     public static final int MONDAY_BEFORE_JULIAN_EPOCH = Time.EPOCH_JULIAN_DAY - 3;
+    public static final int DECLINED_EVENT_ALPHA = 0x66;
+    public static final int DECLINED_EVENT_TEXT_ALPHA = 0xC0;
 
     private static final float SATURATION_ADJUST = 0.3f;
 
@@ -524,6 +525,26 @@ public class Utils {
     }
 
     /**
+     * Finds and returns the next midnight after "theTime" in milliseconds UTC
+     *
+     * @param recycle - Time object to recycle, otherwise null.
+     * @param theTime - Time used for calculations (in UTC)
+     * @param tz The time zone to convert this time to.
+     */
+    public static long getNextMidnight(Time recycle, long theTime, String tz) {
+        if (recycle == null) {
+            recycle = new Time();
+        }
+        recycle.timezone = tz;
+        recycle.set(theTime);
+        recycle.monthDay ++;
+        recycle.hour = 0;
+        recycle.minute = 0;
+        recycle.second = 0;
+        return recycle.normalize(true);
+    }
+
+    /**
      * Scan through a cursor of calendars and check if names are duplicated.
      * This travels a cursor containing calendar display names and fills in the
      * provided map with whether or not each name is repeated.
@@ -564,11 +585,6 @@ public class Utils {
         return mAllowWeekForDetailView;
     }
 
-    public static boolean isMultiPaneConfiguration (Context c) {
-        return (c.getResources().getConfiguration().screenLayout &
-                Configuration.SCREENLAYOUT_SIZE_XLARGE) != 0;
-    }
-
     public static boolean getConfigBool(Context c, int key) {
         return c.getResources().getBoolean(key);
     }
@@ -584,7 +600,7 @@ public class Utils {
     // white. The result is the color that should be used for declined events.
     public static int getDeclinedColorFromColor(int color) {
         int bg = 0xffffffff;
-        int a = 0x66;
+        int a = DECLINED_EVENT_ALPHA;
         int r = (((color & 0x00ff0000) * a) + ((bg & 0x00ff0000) * (0xff - a))) & 0xff000000;
         int g = (((color & 0x0000ff00) * a) + ((bg & 0x0000ff00) * (0xff - a))) & 0x00ff0000;
         int b = (((color & 0x000000ff) * a) + ((bg & 0x000000ff) * (0xff - a))) & 0x0000ff00;
@@ -1076,7 +1092,7 @@ public class Utils {
      */
     public static String getDayOfWeekString(int julianDay, int todayJulianDay, long millis,
             Context context) {
-        String tz = getTimeZone(context, null);
+        getTimeZone(context, null);
         int flags = DateUtils.FORMAT_SHOW_WEEKDAY;
         String dayViewText;
         if (julianDay == todayJulianDay) {

@@ -46,7 +46,6 @@ import android.text.util.Rfc822Token;
 import android.text.util.Rfc822Tokenizer;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.QuickContactBadge;
 
 import java.util.ArrayList;
@@ -167,6 +166,8 @@ public class EditEventHelper {
             Calendars.VISIBLE, // 6
             Calendars.MAX_REMINDERS, // 7
             Calendars.ALLOWED_REMINDERS, // 8
+            Calendars.ALLOWED_ATTENDEE_TYPES, // 9
+            Calendars.ALLOWED_AVAILABILITY, // 10
     };
     static final int CALENDARS_INDEX_ID = 0;
     static final int CALENDARS_INDEX_DISPLAY_NAME = 1;
@@ -177,6 +178,8 @@ public class EditEventHelper {
     static final int CALENDARS_INDEX_VISIBLE = 6;
     static final int CALENDARS_INDEX_MAX_REMINDERS = 7;
     static final int CALENDARS_INDEX_ALLOWED_REMINDERS = 8;
+    static final int CALENDARS_INDEX_ALLOWED_ATTENDEE_TYPES = 9;
+    static final int CALENDARS_INDEX_ALLOWED_AVAILABILITY = 10;
 
     static final String CALENDARS_WHERE_WRITEABLE_VISIBLE = Calendars.CALENDAR_ACCESS_LEVEL + ">="
             + Calendars.CAL_ACCESS_CONTRIBUTOR + " AND " + Calendars.VISIBLE + "=1";
@@ -1020,11 +1023,14 @@ public class EditEventHelper {
         model.mHasAlarm = cursor.getInt(EVENT_INDEX_HAS_ALARM) != 0;
         model.mCalendarId = cursor.getInt(EVENT_INDEX_CALENDAR_ID);
         model.mStart = cursor.getLong(EVENT_INDEX_DTSTART);
-        model.mTimezone = cursor.getString(EVENT_INDEX_TIMEZONE);
+        String tz = cursor.getString(EVENT_INDEX_TIMEZONE);
+        if (!TextUtils.isEmpty(tz)) {
+            model.mTimezone = tz;
+        }
         String rRule = cursor.getString(EVENT_INDEX_RRULE);
         model.mRrule = rRule;
         model.mSyncId = cursor.getString(EVENT_INDEX_SYNC_ID);
-        model.mAvailability = cursor.getInt(EVENT_INDEX_AVAILABILITY) != 0;
+        model.mAvailability = cursor.getInt(EVENT_INDEX_AVAILABILITY);
         int accessLevel = cursor.getInt(EVENT_INDEX_ACCESS_LEVEL);
         model.mOwnerAccount = cursor.getString(EVENT_INDEX_OWNER_ACCOUNT);
         model.mHasAttendeeData = cursor.getInt(EVENT_INDEX_HAS_ATTENDEE_DATA) != 0;
@@ -1093,6 +1099,10 @@ public class EditEventHelper {
 
             model.mCalendarMaxReminders = cursor.getInt(CALENDARS_INDEX_MAX_REMINDERS);
             model.mCalendarAllowedReminders = cursor.getString(CALENDARS_INDEX_ALLOWED_REMINDERS);
+            model.mCalendarAllowedAttendeeTypes = cursor
+                    .getString(CALENDARS_INDEX_ALLOWED_ATTENDEE_TYPES);
+            model.mCalendarAllowedAvailability = cursor
+                    .getString(CALENDARS_INDEX_ALLOWED_AVAILABILITY);
 
             return true;
        }
@@ -1222,7 +1232,7 @@ public class EditEventHelper {
         } else {
             values.put(Events.EVENT_LOCATION, (String) null);
         }
-        values.put(Events.AVAILABILITY, model.mAvailability ? 1 : 0);
+        values.put(Events.AVAILABILITY, model.mAvailability);
         values.put(Events.HAS_ATTENDEE_DATA, model.mHasAttendeeData ? 1 : 0);
 
         int accessLevel = model.mAccessLevel;

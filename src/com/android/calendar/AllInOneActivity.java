@@ -125,6 +125,7 @@ public class AllInOneActivity extends Activity implements EventHandler,
     private View mSecondaryPane;
     private String mTimeZone;
     private boolean mShowCalendarControls;
+    private boolean mShowEventInfoFullScreenAgenda;
     private boolean mShowEventInfoFullScreen;
     private int mWeekNum;
 
@@ -331,12 +332,14 @@ public class AllInOneActivity extends Activity implements EventHandler,
         mShowString = res.getString(R.string.show_controls);
         mControlsParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
 
-        mIsMultipane = Utils.isMultiPaneConfiguration(this);
+        mIsMultipane = Utils.getConfigBool(this, R.bool.multiple_pane_config);
         mIsTabletConfig = Utils.getConfigBool(this, R.bool.tablet_config);
         mShowAgendaWithMonth = Utils.getConfigBool(this, R.bool.show_agenda_with_month);
         mShowCalendarControls = Utils.getConfigBool(this, R.bool.show_calendar_controls);
         mShowEventDetailsWithAgenda =
             Utils.getConfigBool(this, R.bool.show_event_details_with_agenda);
+        mShowEventInfoFullScreenAgenda =
+            Utils.getConfigBool(this, R.bool.agenda_show_event_info_full_screen);
         mShowEventInfoFullScreen =
             Utils.getConfigBool(this, R.bool.show_event_info_full_screen);
 
@@ -552,8 +555,8 @@ public class AllInOneActivity extends Activity implements EventHandler,
         super.onSaveInstanceState(outState);
 
         outState.putLong(BUNDLE_KEY_RESTORE_TIME, mController.getTime());
+        outState.putInt(BUNDLE_KEY_RESTORE_VIEW, mCurrentView);
         if (mCurrentView == ViewType.EDIT) {
-            outState.putInt(BUNDLE_KEY_RESTORE_VIEW, mCurrentView);
             outState.putLong(BUNDLE_KEY_EVENT_ID, mController.getEventId());
         }
         outState.putBoolean(BUNDLE_KEY_CHECK_ACCOUNTS, mCheckForAccounts);
@@ -704,10 +707,10 @@ public class AllInOneActivity extends Activity implements EventHandler,
             case R.id.action_create_event:
                 t = new Time();
                 t.set(mController.getTime());
-                if (t.minute >= 30) {
+                if (t.minute > 30) {
                     t.hour++;
                     t.minute = 0;
-                } else {
+                } else if (t.minute > 0 && t.minute < 30) {
                     t.minute = 30;
                 }
                 mController.sendEventRelatedEvent(
@@ -983,6 +986,7 @@ public class AllInOneActivity extends Activity implements EventHandler,
             mHomeTime.setText(timeString);
             mHomeTime.setVisibility(View.VISIBLE);
             // Update when the minute changes
+            mHomeTime.removeCallbacks(mHomeTimeUpdater);
             mHomeTime.postDelayed(
                     mHomeTimeUpdater,
                     DateUtils.MINUTE_IN_MILLIS - (millis % DateUtils.MINUTE_IN_MILLIS));
@@ -1082,7 +1086,9 @@ public class AllInOneActivity extends Activity implements EventHandler,
                     mController.sendEvent(this, EventType.GO_TO, event.selectedTime,
                             event.selectedTime, -1, ViewType.CURRENT);
                 }
-                if (mShowEventInfoFullScreen) {
+                if ((mCurrentView == ViewType.AGENDA && mShowEventInfoFullScreenAgenda) ||
+                        ((mCurrentView == ViewType.DAY || (mCurrentView == ViewType.WEEK) ||
+                                mCurrentView == ViewType.MONTH) && mShowEventInfoFullScreen)){
                     // start event info as activity
                     Intent intent = new Intent(Intent.ACTION_VIEW);
                     Uri eventUri = ContentUris.withAppendedId(Events.CONTENT_URI, event.id);
@@ -1098,18 +1104,17 @@ public class AllInOneActivity extends Activity implements EventHandler,
                     // start event info as a dialog
                     EventInfoFragment fragment = new EventInfoFragment(this,
                             event.id, event.startTime.toMillis(false),
-                            event.endTime.toMillis(false), (int) event.extraLong, true);
+                            event.endTime.toMillis(false), (int) event.extraLong, true,
+                            EventInfoFragment.DIALOG_WINDOW_STYLE);
                     fragment.setDialogParams(event.x, event.y, mActionBar.getHeight());
                     FragmentManager fm = getFragmentManager();
                     FragmentTransaction ft = fm.beginTransaction();
                     // if we have an old popup replace it
                     Fragment fOld = fm.findFragmentByTag(EVENT_INFO_FRAGMENT_TAG);
-                    int oldId;
-                    if (fOld != null && fOld.isAdded() && (oldId = fOld.getId()) != 0) {
-                        ft.replace(oldId, fragment, EVENT_INFO_FRAGMENT_TAG);
-                    } else {
-                        ft.add(fragment, EVENT_INFO_FRAGMENT_TAG);
+                    if (fOld != null && fOld.isAdded()) {
+                        ft.remove(fOld);
                     }
+                    ft.add(fragment, EVENT_INFO_FRAGMENT_TAG);
                     ft.commit();
                 }
             }

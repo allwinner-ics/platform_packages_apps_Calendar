@@ -152,9 +152,10 @@
   <string-array name="availability">
     <item msgid="454869065893453189">"व्यस्त"</item>
     <item msgid="6228387173725732140">"उपलब्ध"</item>
+    <item msgid="2064426942462573474">"अस्‍थायी"</item>
   </string-array>
   <string-array name="visibility">
-    <item msgid="3035788428581513163">"डिफ़ॉल्ट"</item>
+    <item msgid="3035788428581513163">"डिफ़ॉल्ट"</item>
     <item msgid="5200216103966973369">"निजी"</item>
     <item msgid="9182342638433672664">"सार्वजनिक"</item>
   </string-array>
@@ -173,7 +174,7 @@
   </string-array>
   <string-array name="delete_repeating_labels">
     <item msgid="4208432367651646938">"केवल यह ईवेंट"</item>
-    <item msgid="8626755531271570950">"यह और भविष्य के ईवेंट"</item>
+    <item msgid="1536401639805370405">"यह और आगामी ईवेंट"</item>
     <item msgid="7833229563617435430">"सभी ईवेंट"</item>
   </string-array>
   <string-array name="delete_repeating_labels_no_selected">
@@ -181,7 +182,7 @@
     <item msgid="6315440193748139854">"सभी ईवेंट"</item>
   </string-array>
   <string-array name="change_response_labels">
-    <item msgid="2012815396992847028">"केवल यह इन्सटेंस"</item>
+    <item msgid="3466644709343519437">"केवल यह ईवेंट"</item>
     <item msgid="140670561403965380">"श्रृंखला में सभी ईवेंट"</item>
   </string-array>
   <string-array name="buttons_list">

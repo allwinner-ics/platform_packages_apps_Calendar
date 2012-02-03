@@ -22,7 +22,6 @@
     <string name="when_label" msgid="894636567327261599">"कब"</string>
     <string name="timezone_label" msgid="3988530993300431650">"समय क्षेत्र"</string>
     <string name="attendees_label" msgid="2971281641565729725">"अतिथि"</string>
-    <string name="response_label" msgid="5732943469653254290">"<xliff:g id="RESPONSE_TYPE">%s</xliff:g> (<xliff:g id="GUEST_COUNT">%d</xliff:g>)"</string>
     <string name="repeats_label" msgid="7414023871434593196">"दोहराव"</string>
     <string name="no_title_label" msgid="302177118061368042">"(कोई शीर्षक नहीं)"</string>
   <plurals name="Nminutes">
@@ -44,7 +43,7 @@
   <plurals name="weekN">
     <item quantity="other" msgid="8085184869561028365">"<xliff:g id="COUNT">%d</xliff:g> सप्ताह"</item>
   </plurals>
-    <string name="calendar_refresh" msgid="6172731193680500025">"रीफ़्रेश करें"</string>
+    <string name="calendar_refresh" msgid="6172731193680500025">"रीफ़्रेश करें"</string>
     <string name="show_day_view" msgid="5782512782605466016">"दिन दिखाएं"</string>
     <string name="agenda_view" msgid="5566084759423843245">"कार्यसूची"</string>
     <string name="day_view" msgid="4467754504843584437">"दिन"</string>
@@ -60,22 +59,22 @@
     <string name="search" msgid="550656004486017426">"खोज"</string>
     <string name="hide_controls" msgid="830320505938520882">"नियंत्रण छुपाएं"</string>
     <string name="show_controls" msgid="715520586028062621">"नियंत्रण दिखाएं"</string>
-    <string name="select_visible_calendars_title" msgid="5285053789530752843">"प्रदर्शित करने के लिए कैलेंडर"</string>
+    <string name="select_visible_calendars_title" msgid="7944393060991949882">"प्रदर्शित करने के लिए कैलेंडर"</string>
     <string name="synced" msgid="7913940305983383493">"सिंक किया गया"</string>
     <string name="not_synced" msgid="4275114941801829419">"सिंक नहीं किया गया"</string>
-    <string name="acct_not_synced" msgid="2225937158458147648">"यह खाता सिंक नहीं हो रहा है और हो सकता है आपके कैलेंडर नवीनतम न हों."</string>
+    <string name="acct_not_synced" msgid="6126800985681230627">"यह खाता समन्वयित नहीं किया जा रहा है, इसलिए हो सकता है आपके कैलेंडर अद्यतित न हों."</string>
     <string name="accounts" msgid="849401841083180306">"खाते और सिंक"</string>
-    <string name="select_synced_calendars_title" msgid="7122363881046468658">"समन्‍वयि‍त करने के लि‍ए कैलेंडर"</string>
+    <string name="select_synced_calendars_title" msgid="7916084873075901448">"समन्‍वयि‍त करने के लि‍ए कैलेंडर"</string>
     <string name="select_synced_calendars_button" msgid="8890542984949996251">"समन्‍वयि‍त करने के लि‍ए कैलेंडर"</string>
     <string name="hint_what" msgid="709155115005044531">"ईवेंट का नाम"</string>
     <string name="hint_where" msgid="4972598001033801974">"स्थान"</string>
     <string name="hint_description" msgid="1910143586169033232">"विवरण"</string>
     <string name="hint_attendees" msgid="1650488163176888480">"अतिथि"</string>
-    <string name="creating_event" msgid="5252306542761552414">"ईवेंट बनाया गया"</string>
-    <string name="saving_event" msgid="7716081507367732169">"ईवेंट सहेजा गया"</string>
-    <string name="empty_event" msgid="757898251276814787">"रिक्त ईवेंट नहीं बनाया गया"</string>
-    <string name="creating_event_with_guest" msgid="608830786504021732">"आमंत्रण भेजे गए"</string>
-    <string name="saving_event_with_guest" msgid="6177245412801310483">"अपडेट भेजे गए"</string>
+    <string name="creating_event" msgid="7516249252554059980">"ईवेंट बनाया गया."</string>
+    <string name="saving_event" msgid="7694181017411177226">"ईवेंट सहेजा गया."</string>
+    <string name="empty_event" msgid="9018699257414338634">"रिक्त ईवेंट नहीं बनाया गया."</string>
+    <string name="creating_event_with_guest" msgid="8535098983005383300">"आमंत्रण भेजे गए."</string>
+    <string name="saving_event_with_guest" msgid="8678551213800311856">"अपडेट भेजे गए."</string>
     <string name="alert_title" msgid="7869592820853066853">"कैलेंडर सूचनाएं"</string>
     <string name="event_info_title" msgid="56024222340421620">"ईवेंट देखें"</string>
     <string name="event_info_title_invite" msgid="9160326363769403865">"मीटिंग आमंत्रण"</string>
@@ -89,10 +88,9 @@
     <string name="privacy_label" msgid="9215031965259597335">"गोपनीयता"</string>
     <string name="reminders_label" msgid="7292389181815525676">"अनुस्मारक जोड़ें"</string>
     <string name="no_syncable_calendars" msgid="7019488867045436129">"कोई कैलेंडर नहीं"</string>
-    <string name="no_calendars_found" msgid="4265845606733761102">"किसी ईवेंट को जोड़ पाने से पहले आपको उपकरण से कम से कम एक कैलेंडर खाता जोड़ना होगा और कैलेंडर को दृश्‍यमान करना होगा. किसी खाते को जोड़ने के लिए \"खाता जोड़ें\" स्‍पर्श करें (यदि आपने अभी-अभी खाता जोड़ा है तो उसका सिंक पूरा होने तक प्रतीक्षा करें और पुन: प्रयास करें). या रद्द करें स्‍पर्श करें और सुनिश्चित करें कि कम से कम एक कैलेंडर दृश्‍यमान है."</string>
+    <string name="no_calendars_found" msgid="8968682716053492187">"आप कोई ईवेंट जोड़ें उसके पहले, आपको अपने उपकरण में कम से कम एक कैलेंडर खाता जोड़ना होगा और कैलेंडर को दृश्यमान बनाना होगा. कोई खाता जोड़ने के लिए खाता जोड़ें स्पर्श करें (यदि आपने अभी कोई खाता जोड़ा है, तो इसका समन्वयन पूरा होने की प्रतीक्षा करें और पुन: प्रयास करें). या रद्द करें स्पर्श करें और सुनिश्चित करें कि कम से कम एक कैलेंडर दृश्यमान है."</string>
     <string name="create_an_account_desc" msgid="7249605109240576895">"Google खाते के साथ कैलेंडर बेहतर तरीके से कार्य करता है."\n\n"• किसी भी वेब ब्राउज़र से इस पर पहुंचें"\n"• सुरक्षि‍त रूप से अपने ईवेंट का बैकअप लें"</string>
     <string name="add_account" msgid="1669072099756774952">"खाता जोड़ें"</string>
-    <string name="add_guests_label" msgid="7294569977062998743">"अतिथि जोड़ें"</string>
     <string name="view_event_calendar_label" msgid="6126231656338241140">"कैलेंडर:"</string>
     <string name="view_event_organizer_label" msgid="2753151795647402277">"आयोजक:"</string>
     <string name="view_event_response_label" msgid="8382281658458798329">"उपस्थित हो रहे हैं?"</string>
@@ -110,13 +108,11 @@
     <string name="show_older_events" msgid="5140647493681439926">"<xliff:g id="OLDEST_SEARCH_RANGE">%1$s</xliff:g> से पहले के ईवेंट देखने के लिए स्पर्श करें"</string>
     <string name="show_newer_events" msgid="2604638815440163080">"<xliff:g id="NEWEST_SEARCH_RANGE">%1$s</xliff:g> के बाद के ईवेंट देखने के लिए स्पर्श करें"</string>
     <string name="search_title" msgid="8898015280250716254">"मेरे कैलेंडर में खोजें"</string>
-    <string name="num_events" msgid="3351672964607162257">"ईवेंट संख्या"</string>
     <string name="edit_event_label" msgid="7413222956349977161">"विवरण"</string>
     <string name="edit_label" msgid="8934331258435656534">"संपादन"</string>
     <string name="delete_label" msgid="874742811918030739">"हटाएं"</string>
     <string name="save_label" msgid="2133599104834432589">"पूर्ण"</string>
     <string name="discard_label" msgid="2394623883289782541">"रद्द करें"</string>
-    <string name="import_label" msgid="6993796574741477222">"आयात करें"</string>
     <string name="snooze_all_label" msgid="4994488813124409077">"सभी स्नूज़ करें"</string>
     <string name="dismiss_all_label" msgid="1834400025868091301">"सभी ख़ारिज करें"</string>
     <string name="does_not_repeat" msgid="1877681921029738999">"एक-बार का ईवेंट"</string>
@@ -128,18 +124,17 @@
     <string name="yearly_plain" msgid="3652692085322162449">"वार्षिक"</string>
     <string name="monthly_on_day" msgid="5370155265278821156">"मासिक (इस दिन <xliff:g id="DAY_OF_MONTH">%s</xliff:g>)"</string>
     <string name="yearly" msgid="8576208380302949002">"वार्षिक (दिनांक <xliff:g id="DATES">%s</xliff:g>)"</string>
-    <string name="custom" product="tablet" msgid="3784569535926286624">"कस्टम… (टेबलेट पर कस्टमाइज़ नहीं किया जा सकता)"</string>
-    <string name="custom" product="default" msgid="3015205670911301856">"कस्टम… (फ़ोन पर कस्टमाइज़ नहीं किया जा सकता)"</string>
-    <string name="modify_event" msgid="4501745557655992422">"केवल यह ईवेंट बदलें."</string>
-    <string name="modify_all" msgid="7506579040966638538">"श्रृंखला के सभी ईवेंट बदलें."</string>
-    <string name="modify_all_following" msgid="4333745734894639276">"इसे और भविष्य के सभी ईवेंट बदलें."</string>
+    <string name="custom" product="tablet" msgid="3806817351377723249">"कस्टम (टेबलेट पर कस्टमाइज़ नहीं किया जा सकता)"</string>
+    <string name="custom" product="default" msgid="4137468716966004993">"कस्टम (फ़ोन पर कस्टमाइज़ नहीं किया जा सकता)"</string>
+    <string name="modify_event" msgid="5982876409997142690">"केवल यह ईवेंट बदलें"</string>
+    <string name="modify_all" msgid="4421657265864209041">"श्रृंखला के सभी ईवेंट बदलें"</string>
+    <string name="modify_all_following" msgid="3017428541066390380">"यह और सभी आगामी ईवेंट बदलें"</string>
     <string name="new_event_dialog_label" msgid="7553105224561147916">"नया ईवेंट"</string>
     <string name="new_event_dialog_option" msgid="6154657379574669371">"नया ईवेंट"</string>
-    <string name="delete_this_event_title" msgid="8738491083082780492">"यह ईवेंट हटा दिया जाएगा."</string>
-    <string name="delete_title" msgid="5143743507524995383">"हटाएं"</string>
+    <string name="delete_this_event_title" msgid="518402946676919384">"यह ईवेंट हटाएं?"</string>
     <string name="change_response_title" msgid="7704714776070974984">"प्रतिसाद बदलें"</string>
-    <string name="menu_general_preferences" msgid="4057784477122524106">"सामान्य प्राथमिकताएं"</string>
-    <string name="menu_about_preferences" msgid="160474554936812478">"कैलेंडर के बारे में"</string>
+    <string name="menu_general_preferences" msgid="2812705323334260708">"सामान्य सेटिंग"</string>
+    <string name="menu_about_preferences" msgid="6124375438237674973">"कैलेंडर के बारे में"</string>
     <string name="preferences_title" msgid="8045855493262131773">"सेटिंग"</string>
     <string name="preferences_general_title" msgid="2069075513760573117">"कैलेंडर दृश्य सेटिंग"</string>
     <string name="preferences_reminder_title" msgid="6940022527071973010">"अनुस्मारक सेटिंग"</string>
@@ -147,11 +142,11 @@
     <string name="preferences_week_start_day_title" msgid="4619489296444901622">"सप्ताह का प्रारंभ"</string>
     <string name="preferences_week_start_day_dialog" msgid="5181634128884089113">"सप्ताह का प्रारंभ"</string>
     <string name="preferences_clear_search_history_title" msgid="6619916370215282982">"खोज इतिहास साफ़ करें"</string>
-    <string name="preferences_clear_search_history_summary" msgid="5813077357221990">"आपके द्वारा की गई सभी खोजों को निकालें"</string>
-    <string name="search_history_cleared" msgid="7317062958300188595">"खोज इतिहास साफ़ किया गया"</string>
+    <string name="preferences_clear_search_history_summary" msgid="7864674093455778158">"आपके द्वारा की गई सभी खोजों को निकालें"</string>
+    <string name="search_history_cleared" msgid="1536707558435227567">"खोज इतिहास साफ़ किया गया."</string>
     <string name="preferences_alerts_title" msgid="6636088008103904020">"सूचनाएं"</string>
     <string name="preferences_alerts_vibrateWhen_title" msgid="8731372580674292759">"कंपन"</string>
-    <string name="preferences_alerts_ringtone_title" msgid="7565118268120729644">"रिंगटोन का चयन करें"</string>
+    <string name="preferences_alerts_ringtone_title" msgid="7872809411438804447">"रिंगटोन चुनें"</string>
     <string name="preferences_alerts_popup_title" msgid="6643468203670475296">"पॉप-अप सूचना"</string>
     <string name="preferences_default_reminder_title" msgid="5188861433342733905">"डिफ़ॉल्ट अनुस्मारक समय"</string>
     <string name="preferences_default_reminder_dialog" msgid="2490348857239323412">"डिफ़ॉल्ट अनुस्मारक समय"</string>

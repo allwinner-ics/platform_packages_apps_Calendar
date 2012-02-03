@@ -21,6 +21,7 @@ import com.android.calendarcommon.EventRecurrence;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -85,10 +86,18 @@ public class DeleteEventHelper {
     private int mWhichDelete;
     private ArrayList<Integer> mWhichIndex;
     private AlertDialog mAlertDialog;
+    private Dialog.OnDismissListener mDismissListener;
 
     private String mSyncId;
 
     private AsyncQueryService mService;
+
+    private DeleteNotifyListener mDeleteStartedListener = null;
+
+    public interface DeleteNotifyListener {
+        public void onDeleteStarted();
+    }
+
 
     public DeleteEventHelper(Context context, Activity parentActivity, boolean exitWhenDone) {
         if (exitWhenDone && parentActivity == null) {
@@ -124,6 +133,7 @@ public class DeleteEventHelper {
     private DialogInterface.OnClickListener mDeleteNormalDialogListener =
             new DialogInterface.OnClickListener() {
         public void onClick(DialogInterface dialog, int button) {
+            deleteStarted();
             long id = mModel.mId; // mCursor.getInt(mEventIndexId);
             Uri uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id);
             mService.startDelete(mService.getNextToken(), null, uri, null, null, Utils.UNDO_DELAY);
@@ -142,6 +152,7 @@ public class DeleteEventHelper {
     private DialogInterface.OnClickListener mDeleteExceptionDialogListener =
         new DialogInterface.OnClickListener() {
         public void onClick(DialogInterface dialog, int button) {
+            deleteStarted();
             deleteExceptionEvent();
             if (mCallback != null) {
                 mCallback.run();
@@ -174,6 +185,7 @@ public class DeleteEventHelper {
     private DialogInterface.OnClickListener mDeleteRepeatingDialogListener =
             new DialogInterface.OnClickListener() {
         public void onClick(DialogInterface dialog, int button) {
+            deleteStarted();
             if (mWhichDelete != -1) {
                 deleteRepeatingEvent(mWhichDelete);
             }
@@ -255,7 +267,7 @@ public class DeleteEventHelper {
         String rRule = model.mRrule;
         String originalEvent = model.mOriginalSyncId;
         if (TextUtils.isEmpty(rRule)) {
-            AlertDialog dialog = new AlertDialog.Builder(mContext).setTitle(R.string.delete_title)
+            AlertDialog dialog = new AlertDialog.Builder(mContext)
                     .setMessage(R.string.delete_this_event_title)
                     .setIconAttribute(android.R.attr.alertDialogIcon)
                     .setNegativeButton(android.R.string.cancel, null).create();
@@ -271,7 +283,9 @@ public class DeleteEventHelper {
                         mContext.getText(android.R.string.ok),
                         mDeleteExceptionDialogListener);
             }
+            dialog.setOnDismissListener(mDismissListener);
             dialog.show();
+            mAlertDialog = dialog;
         } else {
             // This is a repeating event.  Pop up a dialog asking which events
             // to delete.
@@ -306,11 +320,12 @@ public class DeleteEventHelper {
             mWhichIndex = labelIndex;
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(mContext,
                     android.R.layout.simple_list_item_single_choice, labelArray);
-            AlertDialog dialog = new AlertDialog.Builder(mContext).setTitle(R.string.delete_title)
+            AlertDialog dialog = new AlertDialog.Builder(mContext)
                     .setIconAttribute(android.R.attr.alertDialogIcon)
                     .setSingleChoiceItems(adapter, which, mDeleteListListener)
                     .setPositiveButton(android.R.string.ok, mDeleteRepeatingDialogListener)
                     .setNegativeButton(android.R.string.cancel, null).show();
+            dialog.setOnDismissListener(mDismissListener);
             mAlertDialog = dialog;
 
             if (which == -1) {
@@ -421,6 +436,29 @@ public class DeleteEventHelper {
         }
         if (mExitWhenDone) {
             mParent.finish();
+        }
+    }
+
+    public void setDeleteNotificationListener(DeleteNotifyListener listener) {
+        mDeleteStartedListener = listener;
+    }
+
+    private void deleteStarted() {
+        if (mDeleteStartedListener != null) {
+            mDeleteStartedListener.onDeleteStarted();
+        }
+    }
+
+    public void setOnDismissListener(Dialog.OnDismissListener listener) {
+        if (mAlertDialog != null) {
+            mAlertDialog.setOnDismissListener(listener);
+        }
+        mDismissListener = listener;
+    }
+
+    public void dismissAlertDialog() {
+        if (mAlertDialog != null) {
+            mAlertDialog.dismiss();
         }
     }
 }

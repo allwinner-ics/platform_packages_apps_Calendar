@@ -42,6 +42,7 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -112,7 +113,7 @@ import java.util.regex.Pattern;
 
 
 public class EventInfoFragment extends DialogFragment implements OnCheckedChangeListener,
-        CalendarController.EventHandler, OnClickListener {
+        CalendarController.EventHandler, OnClickListener, DeleteEventHelper.DeleteNotifyListener {
     public static final boolean DEBUG = false;
 
     public static final String TAG = "EventInfoFragment";
@@ -121,6 +122,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     protected static final String BUNDLE_KEY_START_MILLIS = "key_start_millis";
     protected static final String BUNDLE_KEY_END_MILLIS = "key_end_millis";
     protected static final String BUNDLE_KEY_IS_DIALOG = "key_fragment_is_dialog";
+    protected static final String BUNDLE_KEY_DELETE_DIALOG_VISIBLE = "key_delete_dialog_visible";
+    protected static final String BUNDLE_KEY_WINDOW_STYLE = "key_window_style";
     protected static final String BUNDLE_KEY_ATTENDEE_RESPONSE = "key_attendee_response";
 
     private static final String PERIOD_SPACE = ". ";
@@ -131,6 +134,12 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
      */
     static final int UPDATE_SINGLE = 0;
     static final int UPDATE_ALL = 1;
+
+    // Style of view
+    public static final int FULL_WINDOW_STYLE = 0;
+    public static final int DIALOG_WINDOW_STYLE = 1;
+
+    private int mWindowStyle = DIALOG_WINDOW_STYLE;
 
     // Query tokens for QueryHandler
     private static final int TOKEN_QUERY_EVENT = 1 << 0;
@@ -248,6 +257,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     private int mNumOfAttendees;
 
     private EditResponseHelper mEditResponseHelper;
+    private boolean mDeleteDialogVisible = false;
+    private DeleteEventHelper mDeleteHelper;
 
     private int mOriginalAttendeeResponse;
     private int mAttendeeResponseFromIntent = CalendarController.ATTENDEE_NO_RESPONSE;
@@ -256,12 +267,14 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     private boolean mHasAlarm;
     private int mMaxReminders;
     private String mCalendarAllowedReminders;
+    // Used to prevent saving changes in event if it is being deleted.
+    private boolean mEventDeletionStarted = false;
 
     private TextView mTitle;
     private TextView mWhenDate;
     private TextView mWhenTime;
     private TextView mWhere;
-    private TextView mDesc;
+    private ExpandableTextView mDesc;
     private AttendeesView mLongAttendees;
     private Menu mMenu = null;
     private View mHeadlines;
@@ -300,6 +313,7 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
     private QueryHandler mHandler;
 
+
     private Runnable mTZUpdater = new Runnable() {
         @Override
         public void run() {
@@ -309,8 +323,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
     private OnItemSelectedListener mReminderChangeListener;
 
-    private static int DIALOG_WIDTH = 500;
-    private static int DIALOG_HEIGHT = 600;
+    private static int mDialogWidth = 500;
+    private static int mDialogHeight = 600;
     private static int DIALOG_TOP_MARGIN = 8;
     private boolean mIsDialog = false;
     private boolean mIsPaused = true;
@@ -318,11 +332,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     private int mX = -1;
     private int mY = -1;
     private int mMinTop;         // Dialog cannot be above this location
-    private Button mDescButton;  // Button to expand/collapse the description
-    private String mMoreLabel;   // Labels for the button
-    private String mLessLabel;
-    private boolean mShowMaxDescription;  // Current status of button
-    private int mDescLineNum;             // The default number of lines in the description
     private boolean mIsTabletConfig;
     private Activity mActivity;
     private Context mContext;
@@ -433,13 +442,21 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     }
 
     public EventInfoFragment(Context context, Uri uri, long startMillis, long endMillis,
-            int attendeeResponse, boolean isDialog) {
-        if (mScale == 0) {
-            mScale = context.getResources().getDisplayMetrics().density;
-            if (mScale != 1) {
-                DIALOG_WIDTH *= mScale;
-                DIALOG_HEIGHT *= mScale;
-                DIALOG_TOP_MARGIN *= mScale;
+            int attendeeResponse, boolean isDialog, int windowStyle) {
+
+        if (isDialog) {
+            Resources r = context.getResources();
+
+            mDialogWidth = r.getInteger(R.integer.event_info_dialog_width);
+            mDialogHeight = r.getInteger(R.integer.event_info_dialog_height);
+
+            if (mScale == 0) {
+                mScale = context.getResources().getDisplayMetrics().density;
+                if (mScale != 1) {
+                    mDialogWidth *= mScale;
+                    mDialogHeight *= mScale;
+                    DIALOG_TOP_MARGIN *= mScale;
+                }
             }
         }
         mIsDialog = isDialog;
@@ -449,6 +466,7 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         mStartMillis = startMillis;
         mEndMillis = endMillis;
         mAttendeeResponseFromIntent = attendeeResponse;
+        mWindowStyle = windowStyle;
     }
 
     // This is currently required by the fragment manager.
@@ -458,9 +476,9 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
 
     public EventInfoFragment(Context context, long eventId, long startMillis, long endMillis,
-            int attendeeResponse, boolean isDialog) {
+            int attendeeResponse, boolean isDialog, int windowStyle) {
         this(context, ContentUris.withAppendedId(Events.CONTENT_URI, eventId), startMillis,
-                endMillis, attendeeResponse, isDialog);
+                endMillis, attendeeResponse, isDialog, windowStyle);
         mEventId = eventId;
     }
 
@@ -487,6 +505,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
         if (savedInstanceState != null) {
             mIsDialog = savedInstanceState.getBoolean(BUNDLE_KEY_IS_DIALOG, false);
+            mWindowStyle = savedInstanceState.getInt(BUNDLE_KEY_WINDOW_STYLE,
+                    DIALOG_WINDOW_STYLE);
         }
 
         if (mIsDialog) {
@@ -505,16 +525,16 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         WindowManager.LayoutParams a = window.getAttributes();
         a.dimAmount = .4f;
 
-        a.width = DIALOG_WIDTH;
-        a.height = DIALOG_HEIGHT;
+        a.width = mDialogWidth;
+        a.height = mDialogHeight;
 
 
         // On tablets , do smart positioning of dialog
         // On phones , use the whole screen
 
         if (mX != -1 || mY != -1) {
-            a.x = mX - DIALOG_WIDTH / 2;
-            a.y = mY - DIALOG_HEIGHT / 2;
+            a.x = mX - mDialogWidth / 2;
+            a.y = mY - mDialogHeight / 2;
             if (a.y < mMinTop) {
                 a.y = mMinTop + DIALOG_TOP_MARGIN;
             }
@@ -563,9 +583,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             mEditResponseHelper.setWhichEvents(UPDATE_ALL);
         }
         mHandler = new QueryHandler(activity);
-        mDescLineNum = activity.getResources().getInteger((R.integer.event_info_desc_line_num));
-        mMoreLabel = activity.getResources().getString((R.string.event_info_desc_more));
-        mLessLabel = activity.getResources().getString((R.string.event_info_desc_less));
         if (!mIsDialog) {
             setHasOptionsMenu(true);
         }
@@ -574,24 +591,29 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        mView = inflater.inflate(R.layout.event_info, container, false);
+
+        if (savedInstanceState != null) {
+            mIsDialog = savedInstanceState.getBoolean(BUNDLE_KEY_IS_DIALOG, false);
+            mWindowStyle = savedInstanceState.getInt(BUNDLE_KEY_WINDOW_STYLE,
+                    DIALOG_WINDOW_STYLE);
+            mDeleteDialogVisible =
+                savedInstanceState.getBoolean(BUNDLE_KEY_DELETE_DIALOG_VISIBLE,false);
+
+        }
+
+        if (mWindowStyle == DIALOG_WINDOW_STYLE) {
+            mView = inflater.inflate(R.layout.event_info_dialog, container, false);
+        } else {
+            mView = inflater.inflate(R.layout.event_info, container, false);
+        }
         mScrollView = (ScrollView) mView.findViewById(R.id.event_info_scroll_view);
         mTitle = (TextView) mView.findViewById(R.id.title);
         mWhenDate = (TextView) mView.findViewById(R.id.when_date);
         mWhenTime = (TextView) mView.findViewById(R.id.when_time);
         mWhere = (TextView) mView.findViewById(R.id.where);
-        mDesc = (TextView) mView.findViewById(R.id.description);
+        mDesc = (ExpandableTextView) mView.findViewById(R.id.description);
         mHeadlines = mView.findViewById(R.id.event_info_headline);
         mLongAttendees = (AttendeesView)mView.findViewById(R.id.long_attendee_list);
-        mDescButton = (Button)mView.findViewById(R.id.desc_expand);
-        mDescButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mShowMaxDescription = !mShowMaxDescription;
-                updateDescription();
-            }
-        });
-        mShowMaxDescription = false; // Show short version of description as default.
         mIsTabletConfig = Utils.getConfigBool(mActivity, R.bool.tablet_config);
 
         if (mUri == null) {
@@ -613,17 +635,17 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
                 if (!mCanModifyCalendar) {
                     return;
                 }
-                DeleteEventHelper deleteHelper = new DeleteEventHelper(
+                mDeleteHelper = new DeleteEventHelper(
                         mContext, mActivity,
                         !mIsDialog && !mIsTabletConfig /* exitWhenDone */);
-                deleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
+                mDeleteHelper.setDeleteNotificationListener(EventInfoFragment.this);
+                mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
+                mDeleteDialogVisible = true;
+                mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
             }});
 
         // Hide Edit/Delete buttons if in full screen mode on a phone
-        if (savedInstanceState != null) {
-            mIsDialog = savedInstanceState.getBoolean(BUNDLE_KEY_IS_DIALOG, false);
-        }
-        if (!mIsDialog && !mIsTabletConfig) {
+        if (!mIsDialog && !mIsTabletConfig || mWindowStyle == EventInfoFragment.FULL_WINDOW_STYLE) {
             mView.findViewById(R.id.event_info_buttons_container).setVisibility(View.GONE);
         }
 
@@ -662,56 +684,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             }
         }
     };
-
-    // Sets the description:
-    // Set the expand/collapse button
-    // Expand/collapse the description according the the current status
-    private void updateDescription() {
-        // If there is no description, hide the description field
-        // and desc button.
-        String text = mDesc.getText().toString();
-        if (TextUtils.isEmpty(text) || TextUtils.isEmpty(text.trim())) {
-            mDesc.setVisibility(View.GONE);
-            mDescButton.setVisibility(View.GONE);
-            return;
-        }
-        // getLineCount() returns at most maxLines worth of text. If we have
-        // less than mDescLineNum lines, we know for sure we don't need the
-        // more/less button and we don't need to recalculate the number of
-        // lines.
-
-        mDesc.setVisibility(View.VISIBLE);
-
-        if (mDesc.getLineCount() < mDescLineNum) {
-            mDescButton.setVisibility(View.GONE);
-            return;
-        }
-
-        // getLineCount() returns at most maxLines worth of text. To
-        // recalculate, set to MAX_VALUE.
-        mDesc.setMaxLines(Integer.MAX_VALUE);
-
-        // Trick to get textview to recalculate line count
-        mDesc.setText(mDesc.getText());
-
-        // Description is exactly mDescLineNum lines (or less).
-        if (mDesc.getLineCount() <= mDescLineNum) {
-            mDescButton.setVisibility(View.GONE);
-            return;
-        }
-
-        // Show button and set label according to the expand/collapse status
-        mDescButton.setVisibility(View.VISIBLE);
-        String moreLessLabel;
-        if (mShowMaxDescription) {
-            moreLessLabel = mLessLabel;
-        } else {
-            moreLessLabel = mMoreLabel;
-            mDesc.setMaxLines(mDescLineNum);
-        }
-
-        mDescButton.setText(moreLessLabel);
-    }
 
     private void updateTitle() {
         Resources res = getActivity().getResources();
@@ -800,6 +772,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         outState.putLong(BUNDLE_KEY_START_MILLIS, mStartMillis);
         outState.putLong(BUNDLE_KEY_END_MILLIS, mEndMillis);
         outState.putBoolean(BUNDLE_KEY_IS_DIALOG, mIsDialog);
+        outState.putInt(BUNDLE_KEY_WINDOW_STYLE, mWindowStyle);
+        outState.putBoolean(BUNDLE_KEY_DELETE_DIALOG_VISIBLE, mDeleteDialogVisible);
         outState.putInt(BUNDLE_KEY_ATTENDEE_RESPONSE, mAttendeeResponseFromIntent);
     }
 
@@ -807,8 +781,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        // Show edit/delete buttons only in non-dialog configuration on a phone
-        if (!mIsDialog && !mIsTabletConfig) {
+        // Show edit/delete buttons only in non-dialog configuration
+        if (!mIsDialog && !mIsTabletConfig || mWindowStyle == EventInfoFragment.FULL_WINDOW_STYLE) {
             inflater.inflate(R.menu.event_info_title_bar, menu);
             mMenu = menu;
             updateMenu();
@@ -818,9 +792,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
-        // If we're a dialog or part of a tablet display we don't want to handle
-        // menu buttons
-        if (mIsDialog || mIsTabletConfig) {
+        // If we're a dialog we don't want to handle menu buttons
+        if (mIsDialog) {
             return false;
         }
         // Handles option menu selections:
@@ -847,9 +820,12 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
                 mActivity.finish();
                 break;
             case R.id.info_action_delete:
-                DeleteEventHelper deleteHelper =
+                mDeleteHelper =
                         new DeleteEventHelper(mActivity, mActivity, true /* exitWhenDone */);
-                deleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
+                mDeleteHelper.setDeleteNotificationListener(EventInfoFragment.this);
+                mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
+                mDeleteDialogVisible = true;
+                mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
                 break;
             default:
                 break;
@@ -859,8 +835,10 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
     @Override
     public void onDestroyView() {
-        if (saveResponse() || saveReminders()) {
-            Toast.makeText(getActivity(), R.string.saving_event, Toast.LENGTH_SHORT).show();
+        if (!mEventDeletionStarted) {
+            if (saveResponse() || saveReminders()) {
+                Toast.makeText(getActivity(), R.string.saving_event, Toast.LENGTH_SHORT).show();
+            }
         }
         super.onDestroyView();
     }
@@ -1143,9 +1121,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
         // Description
         if (description != null && description.length() != 0) {
-            setTextCommon(view, R.id.description, description);
+            mDesc.setText(description);
         }
-        updateDescription();  // Expand or collapse full description
     }
 
     /**
@@ -1194,95 +1171,107 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
          * need to avoid creating overlapping spans.
          */
         String defaultPhoneRegion = System.getProperty("user.region", "US");
-        PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
-        CharSequence text = textView.getText();
-        Iterable<PhoneNumberMatch> phoneIterable = phoneUtil.findNumbers(text, defaultPhoneRegion,
-                PhoneNumberUtil.Leniency.POSSIBLE, Long.MAX_VALUE);
-
-        /*
-         * If the contents of the TextView are already Spannable (which will be the case if
-         * Linkify found stuff, but might not be otherwise), we can just add annotations
-         * to what's there.  If it's not, and we find phone numbers, we need to convert it to
-         * a Spannable form.  (This mimics the behavior of Linkable.addLinks().)
-         */
-        Spannable spanText;
-        if (text instanceof SpannableString) {
-            spanText = (SpannableString) text;
-        } else {
-            spanText = SpannableString.valueOf(text);
-        }
-
-        /*
-         * Get a list of any spans created by Linkify, for the overlapping span check.
-         */
-        URLSpan[] existingSpans = spanText.getSpans(0, spanText.length(), URLSpan.class);
-
-        /*
-         * Insert spans for the numbers we found.  We generate "tel:" URIs.
-         */
+        boolean usRegion = "US".equalsIgnoreCase(defaultPhoneRegion);
         int phoneCount = 0;
-        for (PhoneNumberMatch match : phoneIterable) {
-            int start = match.start();
-            int end = match.end();
 
-            if (spanWillOverlap(spanText, existingSpans, start, end)) {
-                if (Log.isLoggable(TAG, Log.VERBOSE)) {
-                    Log.v(TAG, "Not linkifying " + match.number().getNationalNumber() +
-                            " as phone number due to overlap");
-                }
-                continue;
+        // For US region, use the phone lib to detect numbers
+        // For non-US, skip the phone number detection if links are found already.
+        if (usRegion || !linkifyFoundLinks) {
+            PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+            CharSequence text = textView.getText();
+            Iterable<PhoneNumberMatch> phoneIterable = phoneUtil.findNumbers(text,
+                    defaultPhoneRegion, PhoneNumberUtil.Leniency.POSSIBLE, Long.MAX_VALUE);
+
+            /*
+             * If the contents of the TextView are already Spannable (which will be the case if
+             * Linkify found stuff, but might not be otherwise), we can just add annotations
+             * to what's there.  If it's not, and we find phone numbers, we need to convert it to
+             * a Spannable form.  (This mimics the behavior of Linkable.addLinks().)
+             */
+            Spannable spanText;
+            if (text instanceof SpannableString) {
+                spanText = (SpannableString) text;
+            } else {
+                spanText = SpannableString.valueOf(text);
             }
 
             /*
-             * A quick comparison of PhoneNumberUtil number parsing & formatting, with
-             * defaultRegion="US":
-             *
-             * Input string     RFC3966                     NATIONAL
-             * 5551212          +1-5551212                  555-1212
-             * 6505551212       +1-650-555-1212             (650) 555-1212
-             * 6505551212x123   +1-650-555-1212;ext=123     (650) 555-1212 ext. 123
-             * +41446681800     +41-44-668-18-00            044 668 18 00
-             *
-             * The conversion of NANP 7-digit numbers to RFC3966 is not compatible with our dialer
-             * (which tries to dial 8 digits, and fails).  So that won't work.
-             *
-             * The conversion of the Swiss number to NATIONAL format loses the country code,
-             * so that won't work.
-             *
-             * The Linkify code takes the matching span and strips out everything that isn't a
-             * digit or '+' sign.  We do the same here.  Extension numbers will get appended
-             * without a separator, but the dialer wasn't doing anything useful with ";ext="
-             * anyway.
+             * Get a list of any spans created by Linkify, for the overlapping span check.
              */
+            URLSpan[] existingSpans = spanText.getSpans(0, spanText.length(), URLSpan.class);
 
-            //String dialStr = phoneUtil.format(match.number(),
-            //        PhoneNumberUtil.PhoneNumberFormat.RFC3966);
-            StringBuilder dialBuilder = new StringBuilder();
-            for (int i = start; i < end; i++) {
-                char ch = spanText.charAt(i);
-                if (ch == '+' || Character.isDigit(ch)) {
-                    dialBuilder.append(ch);
+            /*
+             * Insert spans for the numbers we found.  We generate "tel:" URIs.
+             */
+            for (PhoneNumberMatch match : phoneIterable) {
+                int start = match.start();
+                int end = match.end();
+
+                // For non-US region, stop processing if the match doesn't
+                // include the entire text. Should be in there at most once.
+                if (!usRegion && (start != 0 || end != text.length())) {
+                    break;
                 }
+
+                if (spanWillOverlap(spanText, existingSpans, start, end)) {
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "Not linkifying " + match.number().getNationalNumber() +
+                                " as phone number due to overlap");
+                    }
+                    continue;
+                }
+
+                /*
+                 * A quick comparison of PhoneNumberUtil number parsing & formatting, with
+                 * defaultRegion="US":
+                 *
+                 * Input string     RFC3966                     NATIONAL
+                 * 5551212          +1-5551212                  555-1212
+                 * 6505551212       +1-650-555-1212             (650) 555-1212
+                 * 6505551212x123   +1-650-555-1212;ext=123     (650) 555-1212 ext. 123
+                 * +41446681800     +41-44-668-18-00            044 668 18 00
+                 *
+                 * The conversion of NANP 7-digit numbers to RFC3966 is not compatible with our
+                 * dialer (which tries to dial 8 digits, and fails).  So that won't work.
+                 *
+                 * The conversion of the Swiss number to NATIONAL format loses the country code,
+                 * so that won't work.
+                 *
+                 * The Linkify code takes the matching span and strips out everything that isn't a
+                 * digit or '+' sign.  We do the same here.  Extension numbers will get appended
+                 * without a separator, but the dialer wasn't doing anything useful with ";ext="
+                 * anyway.
+                 */
+
+                //String dialStr = phoneUtil.format(match.number(),
+                //        PhoneNumberUtil.PhoneNumberFormat.RFC3966);
+                StringBuilder dialBuilder = new StringBuilder();
+                for (int i = start; i < end; i++) {
+                    char ch = spanText.charAt(i);
+                    if (ch == '+' || Character.isDigit(ch)) {
+                        dialBuilder.append(ch);
+                    }
+                }
+                URLSpan span = new URLSpan("tel:" + dialBuilder.toString());
+
+                spanText.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                phoneCount++;
             }
-            URLSpan span = new URLSpan("tel:" + dialBuilder.toString());
 
-            spanText.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            phoneCount++;
-        }
+            if (phoneCount != 0) {
+                // If we had to "upgrade" to Spannable, store the object into the TextView.
+                if (spanText != text) {
+                    textView.setText(spanText);
+                }
 
-        if (phoneCount != 0) {
-            // If we had to "upgrade" to Spannable, store the object into the TextView.
-            if (spanText != text) {
-                textView.setText(spanText);
-            }
+                // Linkify.addLinks() sets the TextView movement method if it finds any links.  We
+                // want to do the same here.  (This is cloned from Linkify.addLinkMovementMethod().)
+                MovementMethod mm = textView.getMovementMethod();
 
-            // Linkify.addLinks() sets the TextView movement method if it finds any links.  We
-            // want to do the same here.  (This is cloned from Linkify.addLinkMovementMethod().)
-            MovementMethod mm = textView.getMovementMethod();
-
-            if ((mm == null) || !(mm instanceof LinkMovementMethod)) {
-                if (textView.getLinksClickable()) {
-                    textView.setMovementMethod(LinkMovementMethod.getInstance());
+                if ((mm == null) || !(mm instanceof LinkMovementMethod)) {
+                    if (textView.getLinksClickable()) {
+                        textView.setMovementMethod(LinkMovementMethod.getInstance());
+                    }
                 }
             }
         }
@@ -1328,11 +1317,11 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         event.setPackageName(getActivity().getPackageName());
         List<CharSequence> text = event.getText();
 
-        addFieldToAccessibilityEvent(text, mTitle);
-        addFieldToAccessibilityEvent(text, mWhenDate);
-        addFieldToAccessibilityEvent(text, mWhenTime);
-        addFieldToAccessibilityEvent(text, mWhere);
-        addFieldToAccessibilityEvent(text, mDesc);
+        addFieldToAccessibilityEvent(text, mTitle, null);
+        addFieldToAccessibilityEvent(text, mWhenDate, null);
+        addFieldToAccessibilityEvent(text, mWhenTime, null);
+        addFieldToAccessibilityEvent(text, mWhere, null);
+        addFieldToAccessibilityEvent(text, null, mDesc);
 
         RadioGroup response = (RadioGroup) getView().findViewById(R.id.response_value);
         if (response.getVisibility() == View.VISIBLE) {
@@ -1346,17 +1335,23 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         am.sendAccessibilityEvent(event);
     }
 
-    /**
-     * @param text
-     */
-    private void addFieldToAccessibilityEvent(List<CharSequence> text, TextView view) {
-        if (view == null) {
+    private void addFieldToAccessibilityEvent(List<CharSequence> text, TextView tv,
+            ExpandableTextView etv) {
+        CharSequence cs;
+        if (tv != null) {
+            cs = tv.getText();
+        } else if (etv != null) {
+            cs = etv.getText();
+        } else {
             return;
         }
-        String str = view.getText().toString().trim();
-        if (!TextUtils.isEmpty(str)) {
-            text.add(str);
-            text.add(PERIOD_SPACE);
+
+        if (!TextUtils.isEmpty(cs)) {
+            cs = cs.toString().trim();
+            if (cs.length() > 0) {
+                text.add(cs);
+                text.add(PERIOD_SPACE);
+            }
         }
     }
 
@@ -1424,7 +1419,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
                     button.setVisibility(View.GONE);
                 }
             }
-            if (!mIsTabletConfig && mMenu != null) {
+            if ((!mIsDialog && !mIsTabletConfig ||
+                    mWindowStyle == EventInfoFragment.FULL_WINDOW_STYLE) && mMenu != null) {
                 mActivity.invalidateOptionsMenu();
             }
         } else {
@@ -1654,6 +1650,13 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         mIsPaused = true;
         mHandler.removeCallbacks(onDeleteRunnable);
         super.onPause();
+        // Remove event deletion alert box since it is being rebuild in the OnResume
+        // This is done to get the same behavior on OnResume since the AlertDialog is gone on
+        // rotation but not if you press the HOME key
+        if (mDeleteDialogVisible && mDeleteHelper != null) {
+            mDeleteHelper.dismissAlertDialog();
+            mDeleteHelper = null;
+        }
     }
 
     @Override
@@ -1662,6 +1665,14 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         mIsPaused = false;
         if (mDismissOnResume) {
             mHandler.post(onDeleteRunnable);
+        }
+        // Display the "delete confirmation" dialog if needed
+        if (mDeleteDialogVisible) {
+            mDeleteHelper = new DeleteEventHelper(
+                    mContext, mActivity,
+                    !mIsDialog && !mIsTabletConfig /* exitWhenDone */);
+            mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
+            mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
         }
     }
 
@@ -1740,7 +1751,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
 
         // Remove any reminder methods that aren't allowed for this calendar.  If this is
         // a new event, mCalendarAllowedReminders may not be set the first time we're called.
-        Log.d(TAG, "AllowedReminders is " + mCalendarAllowedReminders);
         if (mCalendarAllowedReminders != null) {
             EventViewUtils.reduceMethodList(mReminderMethodValues, mReminderMethodLabels,
                     mCalendarAllowedReminders);
@@ -1806,6 +1816,23 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         String[] labels = r.getStringArray(resNum);
         ArrayList<String> list = new ArrayList<String>(Arrays.asList(labels));
         return list;
+    }
+
+    public void onDeleteStarted() {
+        mEventDeletionStarted = true;
+    }
+
+    private Dialog.OnDismissListener createDeleteOnDismissListener() {
+        return new Dialog.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        // Since OnPause will force the dialog to dismiss , do
+                        // not change the dialog status
+                        if (!mIsPaused) {
+                            mDeleteDialogVisible = false;
+                        }
+                    }
+                };
     }
 
 }
